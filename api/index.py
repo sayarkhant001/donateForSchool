@@ -464,8 +464,18 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body.encode())
 
+    def _original_path(self) -> str:
+        """Get the original request path before Vercel rewrites it."""
+        # Vercel sets X-Forwarded-Uri or X-Now-Route-Matches with original path
+        uri = self.headers.get("X-Forwarded-Uri", "") or self.headers.get("X-Now-Route-Matches", "")
+        if uri:
+            return uri.split("?")[0]
+        return self.path.split("?")[0]
+
     def do_GET(self):
-        if self.path == "/api/setup":
+        path = self._original_path()
+
+        if "setup" in path:
             try:
                 sheets.setup_sheets()
                 self._send(200, json.dumps({"ok": True, "msg": "Sheets setup complete"}))
@@ -476,11 +486,14 @@ class handler(BaseHTTPRequestHandler):
         self._send(200, json.dumps({
             "ok": True,
             "msg": "DonatingBot is running",
-            "path": self.path,
+            "path": path,
         }))
 
+
     def do_POST(self):
-        if self.path != "/api/webhook":
+        path = self._original_path()
+
+        if "webhook" not in path:
             self._send(404, json.dumps({"ok": False}))
             return
 
