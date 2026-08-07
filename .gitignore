@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+
+# Environment
+.env
+.env.local
+*.env
+
+# Vercel
+.vercel/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs.txt
+
+# Database (local only)
+*.db
+*.sqlite3
+
+# Service account keys (NEVER commit these)
+service_account.json
+*credentials*.json
+*-service-account*.json
+donate-for-school-*.json
+*.serviceaccount.json

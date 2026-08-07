@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/index.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "50mb"
+      }
+    }
+  ],
+  "routes": [
+    { "src": "/api/webhook", "dest": "/api/index.py" },
+    { "src": "/api/debug",   "dest": "/api/index.py" },
+    { "src": "/api/setup",   "dest": "/api/index.py" },
+    { "src": "/(.*)",        "dest": "/api/index.py" }
+  ],
+  "functions": {
+    "api/index.py": {
+      "maxDuration": 60
+    }
+  }
+}
