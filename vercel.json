@@ -4,11 +4,13 @@
     "api/index.py": {
       "maxDuration": 60,
       "memory": 1024
+    },
+    "api/setup.py": {
+      "maxDuration": 30
     }
   },
   "rewrites": [
     { "source": "/api/webhook", "destination": "/api/index" },
-    { "source": "/api/setup",   "destination": "/api/index" },
     { "source": "/api/debug",   "destination": "/api/index" },
     { "source": "/(.*)",        "destination": "/api/index" }
   ]
