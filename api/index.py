@@ -491,12 +491,7 @@ class handler(BaseHTTPRequestHandler):
 
 
     def do_POST(self):
-        path = self._original_path()
-
-        if "webhook" not in path:
-            self._send(404, json.dumps({"ok": False}))
-            return
-
+        # All POSTs to /api/index come from Telegram webhook
         # Validate webhook secret
         if config.WEBHOOK_SECRET:
             secret_header = self.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
@@ -514,3 +509,4 @@ class handler(BaseHTTPRequestHandler):
         except Exception as e:
             print(f"[webhook] process error: {e}")
             self._send(200, json.dumps({"ok": True}))  # always 200 to Telegram
+

@@ -8,10 +8,5 @@
     "api/setup.py": {
       "maxDuration": 30
     }
-  },
-  "rewrites": [
-    { "source": "/api/webhook", "destination": "/api/index" },
-    { "source": "/api/debug",   "destination": "/api/index" },
-    { "source": "/(.*)",        "destination": "/api/index" }
-  ]
+  }
 }
