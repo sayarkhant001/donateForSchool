@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "donate-for-school",
+  "private_key_id": "f7272dac1d822103962534b782b23fa3e1c2cdcc",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDWDEfOcskqAxyF\njsZHrDImsdtLIQMfqAu1I9Kma+Qm7Xj0dm1rEUJrxBzba0w4aHVeUUPefLLnU2F0\njKu/VrTisT9112myoHHjNPhJ1jHprafHGeHenAdguNcOUHTxhu6JrZASk9F73Fvm\nFpB4wpfCRbDEJu60WJD0iiNYWucnrQY1WITtQSiPjgWrwngPAmidYCdZQa7s2Us0\nIUaXbjUR7JJj+OIVqpsGGNydMLYgEd4tYxeO7DgKZnDnXuZdc4siu0SrQzfWP526\nMrdg89LWm567US7Y1SWeLVJME0Y6m8DdrFY7AGWwyB8aNwkr+uiYXWiHiOYoNhgo\nKKDCDbT/AgMBAAECggEACtls1amFdG7bm2dtDxqgIMxODbpQIrgiqR1LjZTqvRBi\nBkjEa14LbFPwlIHqnJyq1PYwhvlHcNM4nYQ4e7Ek561NRqdTBl38jSQqW5poRZcV\nlHwa3JeIW4jdma5OpyQMON1GcAf0YR9TvHoIpkj9Zo2gE+ksmzvhU7Z2wSvmYIvc\nXHVRJYqyMMDq65gnszU5VYRko7sM9jtt4vmj9+TvnlK0mIAdobuxuCRVpSzoEb7+\nM4mjrrknxt/LIkEQdsc9XMIqeQcUj0bHJQKguKHQZoKO4IB2U8ib95b6hoeXxYuM\n0Ve0vvEPu0s/9dy/B9mYSrMsIHyecRnL/38YBYcjLQKBgQDw0030SjlNmNAzT34r\nUIwS731+GS6VNCisAG7xbnHsu8G1D+Hqhzj/wwnE4yUVFqPmwXVNcRvRHDFfmznF\ncJcQObqMWZ1vXE5lkgzYImNHm1iTX5cNiDGUoJnWjJj50LvFUAF0doR/1Ol2MOgv\nOZ9LgfqjNQsV3ZDwDN0Tlpa3CwKBgQDjiQkk3wAD5wzddPx9f6wZBczQUCquPn9e\nHUSyrUbECHXHYypdVWPQu4wcJPhobts2IAtJ7Y7BOUbhy6XqIXSzOENMyMZFwgl9\nBMeGjBcV5j+i8Ti5WNankX7SI18l6JXAyTzTNBpiI4RLFn3BEpz0XhXl6Kk7oJ6S\noKnTypFiXQKBgQC9tgej2NC5YxcoRIfkwUgHJqhaLKY4nWUo0hKTmGigj+vxoXhb\nk3iAanmIo1M0AKjPADlS7zZ1jVsLsLFa6u3lt0RQicvuzO1pMBt0K+q/nw2w0s2g\nuFgueDGYBRwBN8Cjl/n9b9vDA8uB8tcFVMQ67EKwTPnVmLwzjj6dzrQdrwKBgG4i\nZISuVCmPatC+0YBFjh3Giu7B/wa8RZZegGQkLz6wAaJzQ4xNyrS8MwNkecDC9+Ro\n+k3caN7qRH8CvdpoOz6MmzbNb/tQApu69oEPyhTVkDPkotpEQBJ4AHTinimRPPtF\n7OUmMScTnfNifZg41DQMXnkcdt3fzyGWFt3nDRwZAoGBALPh0aVIMA1KobtJ5hzH\nGo8lEdHIzkPdIclbophtBr+lRy5RcCyznM3+xgZtCaiMnIEe2N6OeiP0KvchDSVD\nezq0gsuvr/S4U0mbFu7wMvIk0dZej3Gs0w/9MVYiuK3qaTnKNPMfce1d6EDyDhgT\ntkjcgY/n/DSIIHbjROY0TL/+\n-----END PRIVATE KEY-----\n",
+  "client_email": "donateforschool@donate-for-school.iam.gserviceaccount.com",
+  "client_id": "115106577354273628864",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/donateforschool%40donate-for-school.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

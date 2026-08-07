@@ -1,0 +1,158 @@
+﻿================================================================================
+  DONATING BOT — FULL SETUP LOG
+  Date       : 2026-08-07
+  Updated At : 2026-08-07 23:51 (MMT +06:30)
+  Project    : DonatingBot (Vercel Serverless)
+  Status     : CODE COMPLETE — READY TO DEPLOY
+================================================================================
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 1: CREDENTIALS (ALL COLLECTED)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[OK] BOT_TOKEN              = 8186151811:AAHp0ocmzlbiNysPGpf8PyUm8sB-xwa0aQY
+[OK] ADMIN_IDS              = 5684146708
+[OK] ALLOWED_CHAT_ID        = -1004307506701 (Donate forSchool)
+[OK] GOOGLE_SPREADSHEET_ID  = 1du4rLYOPnCh-nWwygVdL0YRpD_SRKRFzGYOjweJ2j2Y
+[OK] GOOGLE_DRIVE_FOLDER_ID = 1vCgBdVAxyLtPr5l20_FgUD5NocZJaY5N
+[OK] GEMINI_API_KEY         = AQ.Ab8RN6KVbwNDvj6ry8YXSKWugeEleDM-h2RFiDbqa5VOEeLnMw
+[OK] WEBHOOK_SECRET         = 3uMv4KLZm70Hf96VDwREs8WQOeqToySb
+[OK] RATE_LIMIT_SECONDS     = 60
+[OK] GOOGLE_SERVICE_ACCOUNT = donateforschool@donate-for-school.iam.gserviceaccount.com
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 2: FILES BUILT (CODE COMPLETE)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[OK] api/index.py        — Main webhook handler (full conversation flow)
+[OK] lib/messages.py     — All Burmese Unicode strings
+[OK] lib/vision.py       — Gemini Vision (WavePay + NUGPay)
+[OK] lib/sheets.py       — Google Sheets (new 13-column schema)
+[OK] lib/drive.py        — Drive upload with monthly folders
+[OK] lib/state.py        — Conversation state machine
+[OK] lib/broadcast.py    — Teacher broadcast system
+[OK] lib/security.py     — Membership check (no join link)
+[OK] lib/config.py       — Environment config
+[OK] requirements.txt    — Dependencies (flask removed)
+[OK] vercel.json         — Vercel routing config
+
+SYNTAX CHECK: All files passed python -m py_compile
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 3: GOOGLE SHEETS SETUP (DO THIS BEFORE DEPLOYING)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The bot needs 4 tabs in the spreadsheet. After deploying, visit:
+  https://YOUR_VERCEL_URL/api/setup
+This will auto-create all tabs with the correct headers.
+
+Tab: Donations (auto-created)
+  Columns: Submitted At | Student ID | Class | Payment Method |
+           Entered Amount (Ks) | SS Amount (Ks) | Transaction Date & Time |
+           From Account | To Account | Transaction ID |
+           Screenshot Link | Submitted By | Telegram User ID
+
+Tab: Payment Accounts (fill in manually)
+  Columns: Class | Method | Account Name | Account Number | Active
+  Example rows:
+    Grade 9 | Wave | Mg Mg   | 09123456789        | TRUE
+    Grade 9 | NUG  | Mg Mg   | sayarkhant*nugpay.app | TRUE
+    Grade 10| Wave | Ma Ma   | 09987654321        | TRUE
+    Grade 10| NUG  | Ma Ma   | mamaNUG*nugpay.app | TRUE
+
+Tab: Settings (optional — edit welcome/thank-you messages)
+  Key                 | Value
+  welcome_message     | (Burmese welcome text)
+  thank_you_message   | (Burmese thank-you text with {placeholders})
+
+Tab: Users (auto-created — do not edit)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 4: DEPLOY TO VERCEL (NEXT STEPS)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Step 1 — Install Vercel CLI (if not installed):
+  npm install -g vercel
+
+Step 2 — Login to Vercel:
+  vercel login
+
+Step 3 — Deploy from project folder:
+  cd c:\Users\localhost\Downloads\serverless\DonatingBot
+  vercel --prod
+
+Step 4 — Add Environment Variables in Vercel Dashboard:
+  Go to: vercel.com → Your Project → Settings → Environment Variables
+  Add all variables from Section 1 above.
+  (Or use: vercel env add VARIABLE_NAME for each)
+
+Step 5 — Run sheet setup (once):
+  Open browser: https://YOUR_VERCEL_URL/api/setup
+
+Step 6 — Fill in Payment Accounts tab in Google Sheets (see Section 3)
+
+Step 7 — Register Telegram Webhook:
+  Open browser:
+  https://api.telegram.org/bot8186151811:AAHp0ocmzlbiNysPGpf8PyUm8sB-xwa0aQY/setWebhook?url=https://YOUR_VERCEL_URL/api/webhook^&secret_token=3uMv4KLZm70Hf96VDwREs8WQOeqToySb
+
+Step 8 — Test:
+  Start a chat with the bot, send /start
+  Verify: membership check works, class buttons appear, flow completes
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 5: BOT FLOW SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/start
+  Non-member  → Plain rejection (no join link — closed system)
+  Member      → Welcome message [ဆက်လုပ်ရန်] button
+
+[ဆက်လုပ်ရန်]
+  → Ask Student ID (e.g. G9A001, normalized to uppercase alphanumeric)
+
+Student types ID
+  → Show class buttons (from Payment Accounts sheet)
+
+Student picks class
+  → Show [WavePay] [NUGPay] buttons
+
+Student picks method
+  → Show account details (name + number/NUG ID)
+  → Ask amount (Ks)
+
+Student types amount
+  → Ask to send Screenshot
+
+Student sends photo
+  → Gemini Vision extracts: status, entered_amount(SS), from_account,
+      to_account, transaction_id, date_time
+  → Check: status == Success
+  → Check: not duplicate transaction ID
+  → Check: to_account matches expected account (soft check)
+  → Upload to Drive: DonatingBot Screenshots / 2026 August / filename.jpg
+  → Save to Sheets: 13 columns including BOTH amounts
+  → Send Burmese thank-you card
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 6: ADMIN COMMANDS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/admin      — Admin menu (Burmese)
+/stats      — Daily + monthly income by class and method, with Wave/NUG split
+/accounts   — List all Wave + NUG accounts per class
+/broadcast  — Send a message to all users who have used the bot
+/cancel     — Cancel current flow
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 7: FUTURE FEATURES (NOT YET BUILT)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ ] PDF certificate delivery system
+[ ] Charts in Sheets (teacher can add manually using built-in chart tool)
+================================================================================
