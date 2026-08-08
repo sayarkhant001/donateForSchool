@@ -83,6 +83,17 @@ def _ensure_tab(name: str, headers: list[str]):
         ws.append_row(headers, value_input_option="USER_ENTERED")
 
 
+# Ordered list of supported payment methods and their column names
+_METHODS = ["KBZ", "Wave", "NUG"]
+_ACCOUNTS_HEADERS = [
+    "Class",
+    "KBZ Name", "KBZ Number",
+    "Wave Name", "Wave Number",
+    "NUG Name",  "NUG Number",
+    "Active",
+]
+
+
 def setup_sheets():
     """Ensure all required tabs and headers exist. Call once on deploy."""
     _ensure_tab(_DONATIONS_SHEET, [
@@ -91,9 +102,7 @@ def setup_sheets():
         "Transaction Date & Time", "From Account", "To Account",
         "Transaction ID", "Screenshot Link", "Submitted By", "Telegram User ID"
     ])
-    _ensure_tab(_ACCOUNTS_SHEET, [
-        "Class", "Method", "Account Name", "Account Number", "Active"
-    ])
+    _ensure_tab(_ACCOUNTS_SHEET, _ACCOUNTS_HEADERS)
     _ensure_tab(_SETTINGS_SHEET, ["Key", "Value"])
     _ensure_tab(_USERS_SHEET, ["User ID", "Username", "First Seen"])
 
@@ -156,73 +165,79 @@ def is_duplicate_transaction(transaction_id: str) -> bool:
 # ─── Payment Accounts ─────────────────────────────────────────────────────────
 
 def get_all_classes() -> list[str]:
-    """Returns unique, ordered list of classes from Payment Accounts sheet."""
+    """Returns ordered list of classes from Payment Accounts sheet (one row per class)."""
     try:
         ws = get_sheet(_ACCOUNTS_SHEET)
         records = ws.get_all_records()
-        seen = []
-        for r in records:
-            cls = str(r.get("Class", "")).strip()
-            if cls and cls not in seen:
-                seen.append(cls)
-        return seen
+        return [
+            str(r.get("Class", "")).strip()
+            for r in records
+            if str(r.get("Class", "")).strip()
+        ]
     except Exception as e:
         print(f"[sheets] get_all_classes failed: {e}")
         return []
 
 
-def get_payment_account(class_name: str, method: str) -> dict | None:
-    """
-    Returns the active account for a given class and method.
-    Returns None if not found.
-    """
+def _row_for_class(class_name: str) -> dict | None:
+    """Return the single sheet row dict for a given class, or None."""
     try:
         ws = get_sheet(_ACCOUNTS_SHEET)
         records = ws.get_all_records()
         for r in records:
-            active = str(r.get("Active", "")).upper()
-            if active not in ("TRUE", "YES", "1", "✓"):
-                continue
-            if str(r.get("Class", "")).strip() != class_name.strip():
-                continue
-            if str(r.get("Method", "")).strip().upper() != method.strip().upper():
-                continue
-            return {
-                "class": r.get("Class", ""),
-                "method": r.get("Method", ""),
-                "account_name": r.get("Account Name", ""),
-                "account_number": r.get("Account Number", ""),
-            }
+            if str(r.get("Class", "")).strip() == class_name.strip():
+                return r
         return None
     except Exception as e:
-        print(f"[sheets] get_payment_account failed: {e}")
+        print(f"[sheets] _row_for_class failed: {e}")
         return None
 
 
 def get_methods_for_class(class_name: str) -> list[str]:
-    """Returns list of active payment method names for a given class."""
-    try:
-        ws = get_sheet(_ACCOUNTS_SHEET)
-        records = ws.get_all_records()
-        methods = []
-        for r in records:
-            active = str(r.get("Active", "")).upper()
-            if active not in ("TRUE", "YES", "1", "✓"):
-                continue
-            if str(r.get("Class", "")).strip() != class_name.strip():
-                continue
-            method = str(r.get("Method", "")).strip()
-            if method and method not in methods:
-                methods.append(method)
-        return methods
-    except Exception as e:
-        print(f"[sheets] get_methods_for_class failed: {e}")
+    """
+    Returns active methods for a class from the single-row layout.
+    Checks KBZ Number, Wave Number, NUG Number columns.
+    """
+    row = _row_for_class(class_name)
+    if not row:
         return []
+    active = str(row.get("Active", "")).upper()
+    if active not in ("TRUE", "YES", "1", "✓"):
+        return []
+    methods = []
+    for m in _METHODS:
+        num = str(row.get(f"{m} Number", "")).strip()
+        if num:
+            methods.append(m)
+    return methods
 
+
+def get_payment_account(class_name: str, method: str) -> dict | None:
+    """
+    Returns account info for a given class and method.
+    Reads from single-row layout: {Method} Name / {Method} Number columns.
+    """
+    row = _row_for_class(class_name)
+    if not row:
+        return None
+    active = str(row.get("Active", "")).upper()
+    if active not in ("TRUE", "YES", "1", "✓"):
+        return None
+    m = method.strip()
+    name   = str(row.get(f"{m} Name",   "")).strip()
+    number = str(row.get(f"{m} Number", "")).strip()
+    if not number:
+        return None
+    return {
+        "class":          class_name,
+        "method":         m,
+        "account_name":   name,
+        "account_number": number,
+    }
 
 
 def get_all_accounts() -> list[dict]:
-    """Returns all payment accounts (for admin /accounts command)."""
+    """Returns all payment account rows (for admin /accounts command)."""
     try:
         ws = get_sheet(_ACCOUNTS_SHEET)
         return ws.get_all_records()

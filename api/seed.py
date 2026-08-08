@@ -1,7 +1,12 @@
 """
 api/seed.py — Populate Google Sheets with real payment account data.
-Access: GET https://your-vercel-url/api/seed        (skip if data exists)
-        GET https://your-vercel-url/api/seed?force=1 (clear and re-add)
+
+Payment Accounts layout: ONE ROW PER CLASS
+  Class | KBZ Name | KBZ Number | Wave Name | Wave Number | NUG Name | NUG Number | Active
+
+Access:
+  GET /api/seed          — skip if data exists
+  GET /api/seed?force=1  — clear and re-add
 """
 import json
 from http.server import BaseHTTPRequestHandler
@@ -13,13 +18,15 @@ CLASSES = [
     "Grade 9", "Grade 10", "Grade 11",
 ]
 
-# ── Real payment accounts (same 3 for every class) ─────────────────────────
-BASE_ACCOUNTS = [
-    # Method  | Account Name       | Account Number          | Active
-    ("KBZ",   "Daw Aye Aye Myint", "09981059064",            "TRUE"),
-    ("Wave",  "Ko Khant",          "09941197735",            "TRUE"),
-    ("NUG",   "Sayar Khant",       "sayarkhant*nugpay.app",  "TRUE"),
+ACCOUNTS_HEADER = [
+    "Class",
+    "KBZ Name", "KBZ Number",
+    "Wave Name", "Wave Number",
+    "NUG Name",  "NUG Number",
+    "Active",
 ]
+
+SETTINGS_HEADER = ["Key", "Value"]
 
 SETTINGS = [
     ["welcome_message",
@@ -30,18 +37,21 @@ SETTINGS = [
 
 
 def build_rows() -> list[list[str]]:
+    """One row per class: Class | KBZ Name | KBZ No | Wave Name | Wave No | NUG Name | NUG No | Active"""
     rows = []
     for cls in CLASSES:
-        for method, name, number, active in BASE_ACCOUNTS:
-            rows.append([cls, method, name, number, active])
+        rows.append([
+            cls,
+            "Daw Aye Aye Myint", "09981059064",       # KBZ
+            "Ko Khant",          "09941197735",        # Wave
+            "Sayar Khant",       "sayarkhant*nugpay.app",  # NUG
+            "TRUE",
+        ])
     return rows
 
 
 def seed_sheets(force: bool = False) -> dict:
     results = {}
-
-    ACCOUNTS_HEADER = ["Class", "Method", "Account Name", "Account Number", "Active"]
-    SETTINGS_HEADER = ["Key", "Value"]
 
     # ── Payment Accounts ──────────────────────────────────────────
     ws_acc = sheets.get_sheet("Payment Accounts")
@@ -49,10 +59,10 @@ def seed_sheets(force: bool = False) -> dict:
     rows = build_rows()
 
     if force or len(existing) <= 1:
-        ws_acc.clear()                                          # wipe everything
-        ws_acc.append_row(ACCOUNTS_HEADER)                     # re-add header
+        ws_acc.clear()
+        ws_acc.append_row(ACCOUNTS_HEADER)
         ws_acc.append_rows(rows, value_input_option="USER_ENTERED")
-        results["payment_accounts"] = f"Added {len(rows)} rows ({len(CLASSES)} classes × 3 methods)"
+        results["payment_accounts"] = f"Added {len(rows)} rows (1 row per class, 3 methods as columns)"
     else:
         results["payment_accounts"] = f"Already has {len(existing)-1} rows — use ?force=1 to reset"
 
@@ -61,15 +71,14 @@ def seed_sheets(force: bool = False) -> dict:
     existing2 = ws_set.get_all_values()
 
     if force or len(existing2) <= 1:
-        ws_set.clear()                                          # wipe everything
-        ws_set.append_row(SETTINGS_HEADER)                     # re-add header
+        ws_set.clear()
+        ws_set.append_row(SETTINGS_HEADER)
         ws_set.append_rows(SETTINGS, value_input_option="USER_ENTERED")
         results["settings"] = f"Added {len(SETTINGS)} rows"
     else:
         results["settings"] = f"Already has {len(existing2)-1} rows — use ?force=1 to reset"
 
     return results
-
 
 
 class handler(BaseHTTPRequestHandler):
