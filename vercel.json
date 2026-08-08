@@ -2,10 +2,12 @@
   "version": 2,
   "functions": {
     "api/index.py": {
-      "maxDuration": 60,
-      "memory": 1024
+      "maxDuration": 60
     },
     "api/setup.py": {
+      "maxDuration": 30
+    },
+    "api/seed.py": {
       "maxDuration": 30
     }
   }
