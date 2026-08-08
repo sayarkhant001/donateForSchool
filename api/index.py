@@ -414,7 +414,7 @@ def handle_photo(message: telebot.types.Message):
                 return
 
         # ── Upload to Drive ────────────────────────────────────────────────────
-        method_prefix = "nug" if method == "NUG" else "wave"
+        method_prefix = method.lower().replace("pay", "")  # kbz, wave, nug
         filename = f"{method_prefix}_{student_id}_{int(time.time())}.jpg"
         screenshot_link = upload_screenshot(image_bytes, filename)
 

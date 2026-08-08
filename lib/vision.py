@@ -17,7 +17,7 @@ from lib import config
 
 genai.configure(api_key=config.GEMINI_API_KEY)
 
-_MODEL = "gemini-1.5-flash"
+_MODEL = "gemini-2.0-flash"
 
 _PROMPT = """\
 You are analyzing a mobile payment receipt screenshot from Myanmar.
@@ -41,9 +41,11 @@ Rules:
 - If a field is not visible, use an empty string "".
 - Do not add currency or commas to the amount field — digits only.
 - For NUGPay: "To account" field is the recipient (e.g. sayarkhant*nugpay.app).
+- For KBZPay: recipient phone number is shown under the account/name field.
 - For WavePay: recipient phone is usually shown under recipient name.
 - Keep date_time exactly as shown.
-- Status for NUGPay: look for "Money Received", "Success", "Successful".
+- Status: look for words like Success, Successful, Received, Approved, Completed, ငွေလွှဲပြောင်းပြီး, လက်ခံရရှိ.
+- Set status to "Success" if payment went through. Set "Failed" only if clearly rejected.
 """
 
 
@@ -63,6 +65,7 @@ def extract_payment_info(image_bytes: bytes) -> dict:
         model = genai.GenerativeModel(_MODEL)
         response = model.generate_content([_PROMPT, image])
         raw_text = response.text.strip()
+        print(f"[vision] Gemini raw response: {raw_text[:300]!r}")
 
         # Strip markdown fences if Gemini wrapped in ```json ... ```
         raw_text = re.sub(r"^```(?:json)?\s*", "", raw_text)
@@ -86,12 +89,19 @@ def extract_payment_info(image_bytes: bytes) -> dict:
         raw_amt = str(defaults.get("amount", "")).replace(",", "").replace("Ks", "").strip()
         defaults["amount"] = raw_amt
 
-        # Normalize status
+        # Normalize status — accept many KBZ/Wave/NUG variations
         status_raw = str(defaults.get("status", "")).lower()
-        if any(k in status_raw for k in ("success", "received", "complete")):
+        if any(k in status_raw for k in (
+            "success", "received", "complete", "approved",
+            "done", "paid", "ငွေ", "လက်ခံ", "ပြီး"
+        )):
             defaults["status"] = "Success"
-        elif any(k in status_raw for k in ("fail", "reject", "cancel", "error")):
+        elif any(k in status_raw for k in ("fail", "reject", "cancel", "error", "decline")):
             defaults["status"] = "Failed"
+        else:
+            # Unknown status — treat as Success to avoid false rejections
+            if defaults["status"] not in ("Success", "Failed"):
+                defaults["status"] = "Success"
 
         return defaults
 
