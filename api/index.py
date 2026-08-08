@@ -38,16 +38,29 @@ def _make_class_keyboard(classes: list[str]) -> telebot.types.InlineKeyboardMark
     return kb
 
 
-def _make_method_keyboard() -> telebot.types.InlineKeyboardMarkup:
+def _make_method_keyboard(methods: list[str]) -> telebot.types.InlineKeyboardMarkup:
+    """Build method keyboard from whatever methods exist in the sheet for this class."""
     kb = telebot.types.InlineKeyboardMarkup(row_width=2)
-    kb.add(
-        telebot.types.InlineKeyboardButton(MSG.WAVE_LABEL, callback_data="method:Wave"),
-        telebot.types.InlineKeyboardButton(MSG.NUG_LABEL,  callback_data="method:NUG"),
-    )
-    kb.add(
-        telebot.types.InlineKeyboardButton(MSG.CANCEL_BUTTON, callback_data="cancel"),
-    )
+    buttons = [
+        telebot.types.InlineKeyboardButton(
+            _method_label(m), callback_data=f"method:{m}"
+        )
+        for m in methods
+    ]
+    kb.add(*buttons)
+    kb.add(telebot.types.InlineKeyboardButton(MSG.CANCEL_BUTTON, callback_data="cancel"))
     return kb
+
+
+def _method_label(method: str) -> str:
+    """Return a nice emoji label for any payment method."""
+    m = method.upper()
+    if "WAVE" in m:  return MSG.WAVE_LABEL
+    if "NUG"  in m:  return MSG.NUG_LABEL
+    if "KBZ"  in m:  return "🏦 KBZPay"
+    if "CB"   in m:  return "🏦 CBPay"
+    if "AYA"  in m:  return "🏦 AYAPay"
+    return f"💳 {method}"
 
 
 def _make_start_keyboard() -> telebot.types.InlineKeyboardMarkup:
@@ -199,12 +212,20 @@ def handle_callback(call: telebot.types.CallbackQuery):
     if data.startswith("class:"):
         class_name = data.split(":", 1)[1]
         state.update_data(user_id, class_name=class_name)
+
+        # Dynamically load methods for this class from sheet
+        methods = sheets.get_methods_for_class(class_name)
+        if not methods:
+            bot.send_message(chat_id, f"⚠️ <b>{class_name}</b> အတွက် ငွေလွှဲ အကောင့် မရှိသေးပါ။\nAdmin ထံ ဆက်သွယ်ပါ။", parse_mode="HTML")
+            state.reset(user_id)
+            return
+
         state.set_step(user_id, "waiting_method")
         bot.send_message(
             chat_id,
             f"📚 တန်း - <b>{class_name}</b>\n\n{MSG.CHOOSE_METHOD}",
             parse_mode="HTML",
-            reply_markup=_make_method_keyboard(),
+            reply_markup=_make_method_keyboard(methods),
         )
         return
 
@@ -218,24 +239,23 @@ def handle_callback(call: telebot.types.CallbackQuery):
         account    = sheets.get_payment_account(class_name, method)
 
         if account is None:
-            method_label = MSG.WAVE_LABEL if method == "Wave" else MSG.NUG_LABEL
-            bot.send_message(
-                chat_id,
-                MSG.NO_ACCOUNT.format(method_label),
-            )
+            bot.send_message(chat_id, MSG.NO_ACCOUNT.format(_method_label(method)))
             return
 
         state.update_data(user_id,
                           account_name=account["account_name"],
                           account_number=account["account_number"])
 
-        if method == "Wave":
-            account_text = MSG.SHOW_ACCOUNT_WAVE.format(
+        # Universal account display — works for Wave, NUG, KBZ, or any method
+        m_upper = method.upper()
+        if "NUG" in m_upper:
+            account_text = MSG.SHOW_ACCOUNT_NUG.format(
                 account_name=account["account_name"],
                 account_number=account["account_number"],
             )
         else:
-            account_text = MSG.SHOW_ACCOUNT_NUG.format(
+            # Wave, KBZ, CB, AYA — all use phone-number style display
+            account_text = MSG.SHOW_ACCOUNT_WAVE.format(
                 account_name=account["account_name"],
                 account_number=account["account_number"],
             )
@@ -247,6 +267,7 @@ def handle_callback(call: telebot.types.CallbackQuery):
         state.set_step(user_id, "waiting_amount")
         bot.send_message(chat_id, MSG.ASK_AMOUNT)
         return
+
 
 
 # ─── Text message handler ─────────────────────────────────────────────────────

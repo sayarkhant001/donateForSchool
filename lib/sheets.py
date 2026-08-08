@@ -173,9 +173,8 @@ def get_all_classes() -> list[str]:
 
 def get_payment_account(class_name: str, method: str) -> dict | None:
     """
-    Returns the active account for a given class and method (Wave or NUG).
+    Returns the active account for a given class and method.
     Returns None if not found.
-    Dict: {class, method, account_name, account_number}
     """
     try:
         ws = get_sheet(_ACCOUNTS_SHEET)
@@ -198,6 +197,28 @@ def get_payment_account(class_name: str, method: str) -> dict | None:
     except Exception as e:
         print(f"[sheets] get_payment_account failed: {e}")
         return None
+
+
+def get_methods_for_class(class_name: str) -> list[str]:
+    """Returns list of active payment method names for a given class."""
+    try:
+        ws = get_sheet(_ACCOUNTS_SHEET)
+        records = ws.get_all_records()
+        methods = []
+        for r in records:
+            active = str(r.get("Active", "")).upper()
+            if active not in ("TRUE", "YES", "1", "✓"):
+                continue
+            if str(r.get("Class", "")).strip() != class_name.strip():
+                continue
+            method = str(r.get("Method", "")).strip()
+            if method and method not in methods:
+                methods.append(method)
+        return methods
+    except Exception as e:
+        print(f"[sheets] get_methods_for_class failed: {e}")
+        return []
+
 
 
 def get_all_accounts() -> list[dict]:
