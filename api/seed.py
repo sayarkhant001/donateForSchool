@@ -40,15 +40,17 @@ def build_rows() -> list[list[str]]:
 def seed_sheets(force: bool = False) -> dict:
     results = {}
 
+    ACCOUNTS_HEADER = ["Class", "Method", "Account Name", "Account Number", "Active"]
+    SETTINGS_HEADER = ["Key", "Value"]
+
     # ── Payment Accounts ──────────────────────────────────────────
     ws_acc = sheets.get_sheet("Payment Accounts")
     existing = ws_acc.get_all_values()
     rows = build_rows()
 
     if force or len(existing) <= 1:
-        if force and len(existing) > 1:
-            # Clear all rows except header
-            ws_acc.delete_rows(2, len(existing))
+        ws_acc.clear()                                          # wipe everything
+        ws_acc.append_row(ACCOUNTS_HEADER)                     # re-add header
         ws_acc.append_rows(rows, value_input_option="USER_ENTERED")
         results["payment_accounts"] = f"Added {len(rows)} rows ({len(CLASSES)} classes × 3 methods)"
     else:
@@ -59,14 +61,15 @@ def seed_sheets(force: bool = False) -> dict:
     existing2 = ws_set.get_all_values()
 
     if force or len(existing2) <= 1:
-        if force and len(existing2) > 1:
-            ws_set.delete_rows(2, len(existing2))
+        ws_set.clear()                                          # wipe everything
+        ws_set.append_row(SETTINGS_HEADER)                     # re-add header
         ws_set.append_rows(SETTINGS, value_input_option="USER_ENTERED")
         results["settings"] = f"Added {len(SETTINGS)} rows"
     else:
         results["settings"] = f"Already has {len(existing2)-1} rows — use ?force=1 to reset"
 
     return results
+
 
 
 class handler(BaseHTTPRequestHandler):
