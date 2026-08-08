@@ -504,6 +504,15 @@ class handler(BaseHTTPRequestHandler):
                 self._send(500, json.dumps({"ok": False, "error": str(e)}))
             return
 
+        if "seed" in path:
+            try:
+                from api.seed import seed_sheets
+                results = seed_sheets()
+                self._send(200, json.dumps({"ok": True, "results": results}))
+            except Exception as e:
+                self._send(500, json.dumps({"ok": False, "error": str(e)}))
+            return
+
         self._send(200, json.dumps({
             "ok": True,
             "msg": "DonatingBot is running",
