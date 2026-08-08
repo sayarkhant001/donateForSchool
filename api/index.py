@@ -494,7 +494,13 @@ class handler(BaseHTTPRequestHandler):
         return self.path.split("?")[0]
 
     def do_GET(self):
-        path = self._original_path()
+        from urllib.parse import urlparse, parse_qs
+        # Parse full URL including query string
+        raw = self.headers.get("X-Forwarded-Uri", "") or self.path
+        parsed = urlparse(raw)
+        path = parsed.path
+        qs = parse_qs(parsed.query)
+        force = "1" in qs.get("force", [])
 
         if "setup" in path:
             try:
@@ -507,7 +513,7 @@ class handler(BaseHTTPRequestHandler):
         if "seed" in path:
             try:
                 from api.seed import seed_sheets
-                results = seed_sheets()
+                results = seed_sheets(force=force)
                 self._send(200, json.dumps({"ok": True, "results": results}))
             except Exception as e:
                 self._send(500, json.dumps({"ok": False, "error": str(e)}))
@@ -518,6 +524,7 @@ class handler(BaseHTTPRequestHandler):
             "msg": "DonatingBot is running",
             "path": path,
         }))
+
 
 
     def do_POST(self):
