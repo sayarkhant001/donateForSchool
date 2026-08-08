@@ -376,8 +376,10 @@ def handle_photo(message: telebot.types.Message):
         extracted = extract_payment_info(image_bytes)
 
         if "error" in extracted:
+            err_detail = extracted.get("error", "unknown")
+            print(f"[handler] Gemini extraction error: {err_detail}")
             bot.delete_message(chat_id, processing_msg.message_id)
-            bot.send_message(chat_id, MSG.EXTRACTION_FAILED)
+            bot.send_message(chat_id, f"❌ Gemini error:\n<code>{err_detail[:300]}</code>", parse_mode="HTML")
             state.set_step(user_id, "waiting_screenshot")
             return
 
