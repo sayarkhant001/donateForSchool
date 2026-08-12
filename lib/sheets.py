@@ -128,6 +128,9 @@ def append_donation(
         ws = get_sheet(_DONATIONS_SHEET)
         mmt_tz = timezone(timedelta(hours=6, minutes=30))
         submitted_at = datetime.now(mmt_tz).strftime("%Y-%m-%d %I:%M:%S %p MMT")
+        
+        match_msg = "ပမာဏ ကိုက်ညီပါသည်။" if str(entered_amount).strip() == str(ss_amount).strip() else "ပမာဏ မကိုက်ညီသဖြင့် လူကိုယ်တိုင်စစ်ဆေးရန် လိုအပ်ပါသည်။"
+
         row = [
             submitted_at,
             student_id,
@@ -135,6 +138,7 @@ def append_donation(
             method,
             entered_amount,
             ss_amount,
+            match_msg,
             date_time,
             from_account,
             to_account,
@@ -157,7 +161,7 @@ def is_duplicate_transaction(transaction_id: str, student_id: str) -> bool:
     try:
         ws = get_sheet(_DONATIONS_SHEET)
         student_ids = ws.col_values(2)  # Column B — Student ID
-        tx_ids = ws.col_values(10)      # Column J — Transaction ID
+        tx_ids = ws.col_values(11)      # Column K — Transaction ID (Shifted by 1 due to match_msg column)
         
         for s_id, t_id in zip(student_ids[1:], tx_ids[1:]):
             if t_id.strip() == transaction_id and s_id.strip() == student_id:
