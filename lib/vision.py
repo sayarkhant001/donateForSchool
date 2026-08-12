@@ -12,22 +12,35 @@ def _clean_text(text: str) -> str:
     return '\n'.join(lines)
 
 def _extract_amount(text: str) -> str:
-    # Look for patterns like "10,000 Ks", "10,000.00 Ks", "Amount 10,000"
-    amount_match = re.search(r'([\d,]+(?:\.\d+)?)\s*(?:Ks|ks|MMK|mmk|ks\.)', text, re.IGNORECASE)
-    if amount_match:
-        return amount_match.group(1).replace(',', '')
+    # Find all amounts like 18,000.00 Ks
+    amounts = re.findall(r'([\d,]+(?:\.\d+)?)\s*(?:Ks|ks|MMK|mmk|ks\.)', text, re.IGNORECASE)
+    valid_amounts = []
+    for amt_str in amounts:
+        val = float(amt_str.replace(',', ''))
+        if val > 0:  # Ignore 0.00 fees
+            valid_amounts.append((val, amt_str))
+    
+    if valid_amounts:
+        # Return the largest amount found (often receipt has 0.00 fee and real amount)
+        best = max(valid_amounts, key=lambda x: x[0])[1]
+        return best.replace(',', '').split('.')[0] # Return integer part
     
     # Fallback to looking for numbers near "Amount" or "Total"
-    amount_match = re.search(r'(?:Amount|Total|Amount\s*[(Ks)]*)\s*[:\n-]*\s*([\d,]+(?:\.\d+)?)', text, re.IGNORECASE)
+    amount_match = re.search(r'(?:Amount|Total)\s*[:\n-]*\s*([\d,]+(?:\.\d+)?)', text, re.IGNORECASE)
     if amount_match:
-        return amount_match.group(1).replace(',', '')
+        val = float(amount_match.group(1).replace(',', ''))
+        if val > 0:
+            return str(int(val))
     return ""
 
 def _extract_account(text: str) -> str:
-    # Extract phone numbers (09...)
-    phone_match = re.search(r'(09[\d\s-]{7,10})', text)
+    # Extract phone numbers (optional leading 0, then 9 digits)
+    phone_match = re.search(r'\b(0?9[\d\s-]{7,10})\b', text)
     if phone_match:
-        return phone_match.group(1).replace(' ', '').replace('-', '')
+        val = phone_match.group(1).replace(' ', '').replace('-', '')
+        if not val.startswith('0'):
+            val = '0' + val
+        return val
     
     # Extract NUGPay accounts (NUG...)
     nug_match = re.search(r'(NUG[\d]+)', text, re.IGNORECASE)
@@ -37,13 +50,16 @@ def _extract_account(text: str) -> str:
     return ""
 
 def _extract_transaction_id(text: str) -> str:
-    # Look for transaction ID patterns
-    tx_match = re.search(r'(?:Transaction\s*ID|Txn\s*ID|TID|ID|Ref\s*No)\s*[:#\n-]*\s*([a-zA-Z0-9]+)', text, re.IGNORECASE)
-    if tx_match:
-        return tx_match.group(1)
+    # Look for long numbers (8 to 20 digits)
+    numbers = re.findall(r'\b\d{8,20}\b', text)
     
-    # Just look for long numeric sequences that aren't phone numbers (often TxIDs)
-    tx_match = re.search(r'\b(?!09)(\d{9,15})\b', text)
+    for num in numbers:
+        # Exclude numbers that look like phone numbers
+        if not (num.startswith('09') or (num.startswith('99') and len(num) == 10)):
+            return num
+            
+    # Fallback pattern for alphanumeric tx IDs
+    tx_match = re.search(r'(?:Transaction\s*ID|Txn\s*ID|TID|ID|Ref\s*No)\s*[:#\n-]*\s*([a-zA-Z0-9]{8,20})', text, re.IGNORECASE)
     if tx_match:
         return tx_match.group(1)
     
