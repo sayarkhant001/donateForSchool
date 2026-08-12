@@ -65,16 +65,40 @@ def _extract_transaction_id(text: str) -> str:
     
     return ""
 
+from datetime import datetime
+
 def _extract_date_time(text: str) -> str:
-    # Look for patterns like "30 July 2026 12:19 PM" or "2026-08-12 15:30:00"
+    # Match: Day Month Year ... Hour:Minute AM/PM
+    # e.g., "30 July 2026 • 12:19 PM"
+    dt_match = re.search(r'(\d{1,2})\s+([A-Za-z]+)\s+(\d{4}).*?(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)', text)
+    if dt_match:
+        day, month_str, year, hour, minute, ampm = dt_match.groups()
+        try:
+            dt_obj = datetime.strptime(f"{day} {month_str[:3]} {year} {hour}:{minute} {ampm}", "%d %b %Y %I:%M %p")
+            return dt_obj.strftime("%Y-%m-%d %I:%M:00 %p MMT")
+        except ValueError:
+            pass # fallback to old regex
+            
+    # Alternative format like 30/07/2026 12:19
+    dt_match = re.search(r'(\d{1,2})[/-](\d{1,2})[/-](\d{2,4}).*?(\d{1,2}):(\d{2})(?::\d{2})?(?:\s*(AM|PM|am|pm))?', text, re.IGNORECASE)
+    if dt_match:
+        d1, d2, year, hour, minute, ampm = dt_match.groups()
+        if len(year) == 2:
+            year = "20" + year
+        ampm_str = ampm.upper() if ampm else "AM"
+        try:
+            # Usually DD/MM/YYYY
+            dt_str = f"{d1} {d2} {year} {hour}:{minute} {ampm_str}"
+            dt_obj = datetime.strptime(dt_str, "%d %m %Y %I:%M %p" if ampm else "%d %m %Y %H:%M")
+            return dt_obj.strftime("%Y-%m-%d %I:%M:00 %p MMT")
+        except ValueError:
+            pass
+
+    # Fallback to just returning exactly what was found
     dt_match = re.search(r'(\d{1,2}\s+[A-Za-z]+\s+\d{4}.*?\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))', text)
     if dt_match:
         return dt_match.group(1).replace('\n', ' ')
-    
-    # Alternative format like 30/07/2026 12:19
-    dt_match = re.search(r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4}.*?\d{1,2}:\d{2}(?::\d{2})?(?:\s*(?:AM|PM))?)', text, re.IGNORECASE)
-    if dt_match:
-        return dt_match.group(1).replace('\n', ' ')
+        
     return ""
 
 def _detect_payment_type(text: str) -> str:
