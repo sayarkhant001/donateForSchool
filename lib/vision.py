@@ -1,8 +1,13 @@
 """
 lib/vision.py — Extract payment data from WavePay, KBZPay, and NUGPay screenshots
-using Google Gemini Vision API (google-genai SDK, supports AQ. keys).
+using Google Gemini Vision API with automatic model rotation on quota errors.
 
-Returns a unified dict regardless of payment type.
+Model rotation order (largest free quota first):
+  1. gemini-1.5-flash-8b  — 1 500 req/day, 15 RPM  ← primary
+  2. gemini-2.0-flash     —   500 req/day, 15 RPM  ← fallback
+  3. gemini-1.5-pro       —    50 req/day,  2 RPM  ← last resort
+
+Returns a unified dict regardless of which model was used.
 """
 import json
 import re
@@ -12,8 +17,14 @@ from google import genai
 from google.genai import types
 from lib import config
 
+# ─── Model rotation list (highest free quota → lowest) ───────────────────────
+_MODELS = [
+    "gemini-1.5-flash-8b",
+    "gemini-2.0-flash",
+    "gemini-1.5-pro",
+]
+
 _client: genai.Client | None = None
-_MODEL = "gemini-2.0-flash"
 
 _PROMPT = """\
 You are analyzing a mobile payment receipt screenshot from Myanmar.
@@ -53,9 +64,51 @@ def _get_client() -> genai.Client:
     return _client
 
 
+def _is_quota_error(e: Exception) -> bool:
+    """Returns True if the exception is a 429 quota / rate-limit error."""
+    msg = str(e).lower()
+    return "429" in msg or "resource_exhausted" in msg or "quota" in msg
+
+
+def _normalize_result(raw: dict) -> dict:
+    """Apply standard normalizations to a parsed result dict."""
+    defaults = {
+        "payment_type":   "unknown",
+        "status":         "unknown",
+        "amount":         "",
+        "from_account":   "",
+        "to_account":     "",
+        "recipient_name": "",
+        "transaction_id": "",
+        "date_time":      "",
+    }
+    defaults.update(raw)
+
+    # Normalize amount: strip commas, spaces, currency symbols
+    raw_amt = str(defaults["amount"]).replace(",", "").replace("Ks", "").strip()
+    defaults["amount"] = raw_amt
+
+    # Normalize status
+    status_raw = str(defaults["status"]).lower()
+    if any(k in status_raw for k in (
+        "success", "received", "complete", "approved",
+        "done", "paid", "ငွေ", "လက်ခံ", "ပြီး"
+    )):
+        defaults["status"] = "Success"
+    elif any(k in status_raw for k in ("fail", "reject", "cancel", "error", "decline")):
+        defaults["status"] = "Failed"
+    else:
+        defaults["status"] = "Success"  # unknown → treat as Success
+
+    return defaults
+
+
+# ─── Public API ───────────────────────────────────────────────────────────────
+
 def extract_payment_info(image_bytes: bytes) -> dict:
     """
     Send screenshot to Gemini Vision and extract payment fields.
+    Automatically rotates through models on 429 quota errors.
 
     Returns dict with keys:
         payment_type, status, amount, from_account, to_account,
@@ -64,71 +117,59 @@ def extract_payment_info(image_bytes: bytes) -> dict:
     On failure returns {"error": "..."} with all other keys as empty strings.
     """
     raw_text = ""
-    try:
-        client = _get_client()
+    last_error = None
 
-        # Convert bytes to PIL Image then back to JPEG bytes for Gemini
+    # Convert to JPEG once (reused across model attempts)
+    try:
         img = Image.open(io.BytesIO(image_bytes))
         if img.mode != "RGB":
             img = img.convert("RGB")
         buf = io.BytesIO()
         img.save(buf, format="JPEG", quality=90)
         jpeg_bytes = buf.getvalue()
-
-        response = client.models.generate_content(
-            model=_MODEL,
-            contents=[
-                types.Part.from_text(text=_PROMPT),
-                types.Part.from_bytes(data=jpeg_bytes, mime_type="image/jpeg"),
-            ],
-        )
-
-        raw_text = response.text.strip()
-        print(f"[vision] Gemini raw: {raw_text[:300]!r}")
-
-        # Strip markdown fences if Gemini wrapped in ```json ... ```
-        raw_text = re.sub(r"^```(?:json)?\s*", "", raw_text)
-        raw_text = re.sub(r"\s*```$", "", raw_text)
-
-        result = json.loads(raw_text)
-
-        defaults = {
-            "payment_type": "unknown",
-            "status":       "unknown",
-            "amount":       "",
-            "from_account": "",
-            "to_account":   "",
-            "recipient_name": "",
-            "transaction_id": "",
-            "date_time":    "",
-        }
-        defaults.update(result)
-
-        # Normalize amount: strip commas, spaces, currency symbols
-        raw_amt = str(defaults.get("amount", "")).replace(",", "").replace("Ks", "").strip()
-        defaults["amount"] = raw_amt
-
-        # Normalize status — accept many variations
-        status_raw = str(defaults.get("status", "")).lower()
-        if any(k in status_raw for k in (
-            "success", "received", "complete", "approved",
-            "done", "paid", "ငွေ", "လက်ခံ", "ပြီး"
-        )):
-            defaults["status"] = "Success"
-        elif any(k in status_raw for k in ("fail", "reject", "cancel", "error", "decline")):
-            defaults["status"] = "Failed"
-        else:
-            # Unknown — treat as Success to avoid false rejections
-            defaults["status"] = "Success"
-
-        return defaults
-
-    except json.JSONDecodeError as e:
-        print(f"[vision] JSON decode error: {e}\nRaw: {raw_text!r}")
-        return _error_result(f"JSON parse error: {e}")
     except Exception as e:
-        print(f"[vision] Error: {e}")
-        return _error_result(str(e))
+        return _error_result(f"Image conversion failed: {e}")
+
+    client = _get_client()
+
+    for model in _MODELS:
+        try:
+            print(f"[vision] Trying model: {model}")
+            response = client.models.generate_content(
+                model=model,
+                contents=[
+                    types.Part.from_text(text=_PROMPT),
+                    types.Part.from_bytes(data=jpeg_bytes, mime_type="image/jpeg"),
+                ],
+            )
+
+            raw_text = response.text.strip()
+            print(f"[vision] {model} raw (first 300): {raw_text[:300]!r}")
+
+            # Strip markdown fences if Gemini wrapped in ```json ... ```
+            raw_text = re.sub(r"^```(?:json)?\s*", "", raw_text)
+            raw_text = re.sub(r"\s*```$", "", raw_text)
+
+            result = json.loads(raw_text)
+            print(f"[vision] ✅ Success with model: {model}")
+            return _normalize_result(result)
+
+        except json.JSONDecodeError as e:
+            print(f"[vision] {model} JSON parse error: {e}\nRaw: {raw_text!r}")
+            last_error = Exception(f"JSON parse error: {e}")
+            break  # JSON error is not quota-related — don't rotate
+
+        except Exception as e:
+            if _is_quota_error(e):
+                print(f"[vision] {model} quota exhausted (429) — trying next model...")
+                last_error = e
+                continue  # rotate to next model
+            else:
+                print(f"[vision] {model} error: {e}")
+                last_error = e
+                break  # non-quota error — stop rotating
+
+    return _error_result(str(last_error or "All Gemini models exhausted"))
 
 
 def _error_result(msg: str) -> dict:
