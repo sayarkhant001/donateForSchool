@@ -1,13 +1,6 @@
 """
 lib/vision.py — Extract payment data from WavePay, KBZPay, and NUGPay screenshots
-using Google Gemini Vision API with automatic model rotation on quota errors.
-
-Model rotation order:
-  1. gemini-2.0-flash       — primary (known working)
-  2. gemini-2.0-flash-lite-preview-02-05  — fallback (separate quota pool)
-  3. gemini-1.5-pro         — last resort
-
-Returns a unified dict regardless of which model was used.
+using Google Gemini Vision API.
 """
 import json
 import re
@@ -16,13 +9,6 @@ from PIL import Image
 from google import genai
 from google.genai import types
 from lib import config
-
-# ─── Model rotation list ──────────────────────────────────────────────────────
-_MODELS = [
-    "gemini-2.0-flash",                      # known to work with this key
-    "gemini-2.0-flash-lite-preview-02-05",   # fallback with different quota pool
-    "gemini-1.5-pro",                        # another fallback
-]
 
 _client: genai.Client | None = None
 
@@ -63,11 +49,6 @@ def _get_client() -> genai.Client:
         _client = genai.Client(api_key=config.GEMINI_API_KEY)
     return _client
 
-
-def _is_retryable_error(e: Exception) -> bool:
-    """Returns True if the exception is a 429 quota or 404 not found error."""
-    msg = str(e).lower()
-    return any(k in msg for k in ["429", "resource_exhausted", "quota", "404", "not_found", "not found", "no longer available"])
 
 
 
@@ -117,10 +98,7 @@ def extract_payment_info(image_bytes: bytes) -> dict:
 
     On failure returns {"error": "..."} with all other keys as empty strings.
     """
-    raw_text = ""
-    last_error = None
-
-    # Convert to JPEG once (reused across model attempts)
+    # Convert to JPEG once
     try:
         img = Image.open(io.BytesIO(image_bytes))
         if img.mode != "RGB":
@@ -132,45 +110,34 @@ def extract_payment_info(image_bytes: bytes) -> dict:
         return _error_result(f"Image conversion failed: {e}")
 
     client = _get_client()
+    model = "gemini-2.0-flash"
 
-    for model in _MODELS:
-        try:
-            print(f"[vision] Trying model: {model}")
-            response = client.models.generate_content(
-                model=model,
-                contents=[
-                    types.Part.from_text(text=_PROMPT),
-                    types.Part.from_bytes(data=jpeg_bytes, mime_type="image/jpeg"),
-                ],
-            )
+    try:
+        response = client.models.generate_content(
+            model=model,
+            contents=[
+                types.Part.from_text(text=_PROMPT),
+                types.Part.from_bytes(data=jpeg_bytes, mime_type="image/jpeg"),
+            ],
+        )
 
-            raw_text = response.text.strip()
-            print(f"[vision] {model} raw (first 300): {raw_text[:300]!r}")
+        raw_text = response.text.strip()
+        print(f"[vision] Gemini raw (first 300): {raw_text[:300]!r}")
 
-            # Strip markdown fences if Gemini wrapped in ```json ... ```
-            raw_text = re.sub(r"^```(?:json)?\s*", "", raw_text)
-            raw_text = re.sub(r"\s*```$", "", raw_text)
+        # Strip markdown fences if Gemini wrapped in ```json ... ```
+        raw_text = re.sub(r"^```(?:json)?\s*", "", raw_text)
+        raw_text = re.sub(r"\s*```$", "", raw_text)
 
-            result = json.loads(raw_text)
-            print(f"[vision] ✅ Success with model: {model}")
-            return _normalize_result(result)
+        result = json.loads(raw_text)
+        return _normalize_result(result)
 
-        except json.JSONDecodeError as e:
-            print(f"[vision] {model} JSON parse error: {e}\nRaw: {raw_text!r}")
-            last_error = Exception(f"JSON parse error: {e}")
-            break  # JSON error is not quota-related — don't rotate
-
-        except Exception as e:
-            if _is_retryable_error(e):
-                print(f"[vision] {model} unavailable or quota exhausted (429/404) — trying next model...")
-                last_error = e
-                continue  # rotate to next model
-            else:
-                print(f"[vision] {model} error: {e}")
-                last_error = e
-                break  # non-quota error — stop rotating
-
-    return _error_result(str(last_error or "All Gemini models exhausted"))
+    except json.JSONDecodeError as e:
+        return _error_result(f"JSON parse error: {e}")
+    except Exception as e:
+        msg = str(e)
+        if "429" in msg or "quota" in msg.lower():
+            return _error_result("Quota Exhausted: You have used up your free Gemini API requests for today. Please wait or use a new API key.")
+        return _error_result(msg)
 
 
 def _error_result(msg: str) -> dict:
