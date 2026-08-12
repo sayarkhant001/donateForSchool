@@ -127,7 +127,8 @@ def extract_payment_info(image_bytes: bytes) -> dict:
             "to_account": "",
             "recipient_name": "",
             "transaction_id": tx_id,
-            "date_time": ""
+            "date_time": "",
+            "raw_text": clean_text_str
         }
 
     except requests.exceptions.RequestException as e:

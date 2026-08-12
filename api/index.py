@@ -445,6 +445,12 @@ def handle_photo(message: telebot.types.Message):
             state.set_step(user_id, "waiting_screenshot")
             return
 
+        bot.delete_message(chat_id, processing_msg.message_id)
+
+        if not ss_amount or not tx_id:
+            raw_text = extracted.get("raw_text", "No raw text")
+            bot.send_message(chat_id, f"⚠️ OCR successfully ran but couldn't find the exact numbers. Raw OCR output:\n\n<pre>{raw_text}</pre>", parse_mode="HTML")
+
         state.record_submission(user_id)
         state.reset(user_id)
 
@@ -460,7 +466,6 @@ def handle_photo(message: telebot.types.Message):
             date_time     = extracted.get("date_time", "-"),
         )
 
-        bot.delete_message(chat_id, processing_msg.message_id)
         bot.send_message(chat_id, thank_you)
 
         # Note about dual-student SS if amounts differ
