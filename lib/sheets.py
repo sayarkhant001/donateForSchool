@@ -149,14 +149,19 @@ def append_donation(
         return False
 
 
-def is_duplicate_transaction(transaction_id: str) -> bool:
-    """Returns True if this Transaction ID already exists in Donations."""
+def is_duplicate_transaction(transaction_id: str, student_id: str) -> bool:
+    """Returns True if this Transaction ID already exists for the SAME Student ID."""
     if not transaction_id:
         return False
     try:
         ws = get_sheet(_DONATIONS_SHEET)
-        col_values = ws.col_values(10)  # Column J — Transaction ID
-        return transaction_id in col_values[1:]  # skip header
+        student_ids = ws.col_values(2)  # Column B — Student ID
+        tx_ids = ws.col_values(10)      # Column J — Transaction ID
+        
+        for s_id, t_id in zip(student_ids[1:], tx_ids[1:]):
+            if t_id.strip() == transaction_id and s_id.strip() == student_id:
+                return True
+        return False
     except Exception as e:
         print(f"[sheets] is_duplicate_transaction failed: {e}")
         return False

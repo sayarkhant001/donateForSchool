@@ -399,7 +399,7 @@ def handle_photo(message: telebot.types.Message):
 
         # ── Duplicate TX check ─────────────────────────────────────────────────
         tx_id = extracted.get("transaction_id", "")
-        if tx_id and sheets.is_duplicate_transaction(tx_id):
+        if tx_id and sheets.is_duplicate_transaction(tx_id, student_id):
             bot.delete_message(chat_id, processing_msg.message_id)
             bot.send_message(chat_id, MSG.DUPLICATE_TX)
             state.reset(user_id)
