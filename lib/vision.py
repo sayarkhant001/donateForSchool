@@ -64,10 +64,11 @@ def _get_client() -> genai.Client:
     return _client
 
 
-def _is_quota_error(e: Exception) -> bool:
-    """Returns True if the exception is a 429 quota / rate-limit error."""
+def _is_retryable_error(e: Exception) -> bool:
+    """Returns True if the exception is a 429 quota or 404 not found error."""
     msg = str(e).lower()
-    return "429" in msg or "resource_exhausted" in msg or "quota" in msg
+    return any(k in msg for k in ["429", "resource_exhausted", "quota", "404", "not_found", "not found", "no longer available"])
+
 
 
 def _normalize_result(raw: dict) -> dict:
@@ -160,8 +161,8 @@ def extract_payment_info(image_bytes: bytes) -> dict:
             break  # JSON error is not quota-related — don't rotate
 
         except Exception as e:
-            if _is_quota_error(e):
-                print(f"[vision] {model} quota exhausted (429) — trying next model...")
+            if _is_retryable_error(e):
+                print(f"[vision] {model} unavailable or quota exhausted (429/404) — trying next model...")
                 last_error = e
                 continue  # rotate to next model
             else:
