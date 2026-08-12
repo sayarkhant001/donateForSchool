@@ -3,9 +3,9 @@ lib/vision.py — Extract payment data from WavePay, KBZPay, and NUGPay screensh
 using Google Gemini Vision API with automatic model rotation on quota errors.
 
 Model rotation order:
-  1. gemini-2.5-flash   — primary (latest recommended model, high quota)
-  2. gemini-2.5-pro     — fallback (more capable, lower quota)
-  3. gemini-1.5-flash   — last resort (older but stable)
+  1. gemini-2.0-flash       — primary (known working)
+  2. gemini-2.0-flash-lite-preview-02-05  — fallback (separate quota pool)
+  3. gemini-1.5-pro         — last resort
 
 Returns a unified dict regardless of which model was used.
 """
@@ -19,9 +19,9 @@ from lib import config
 
 # ─── Model rotation list ──────────────────────────────────────────────────────
 _MODELS = [
-    "gemini-2.5-flash",   # primary — latest recommended, high free quota
-    "gemini-2.5-pro",     # fallback — more capable
-    "gemini-1.5-flash",   # last resort — older but widely available
+    "gemini-2.0-flash",                      # known to work with this key
+    "gemini-2.0-flash-lite-preview-02-05",   # fallback with different quota pool
+    "gemini-1.5-pro",                        # another fallback
 ]
 
 _client: genai.Client | None = None
