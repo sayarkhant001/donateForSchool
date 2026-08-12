@@ -374,11 +374,6 @@ def handle_photo(message: telebot.types.Message):
 
         # ── Gemini extraction ──────────────────────────────────────────────────
         extracted = extract_payment_info(image_bytes)
-        
-        # DEBUG: always print raw text temporarily
-        raw_text = extracted.get("raw_text", "")
-        if raw_text:
-            bot.send_message(chat_id, f"🔍 DEBUG - Raw OCR output:\n<pre>{raw_text}</pre>", parse_mode="HTML")
 
         if "error" in extracted:
             err_detail = extracted.get("error", "unknown")

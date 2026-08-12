@@ -65,6 +65,18 @@ def _extract_transaction_id(text: str) -> str:
     
     return ""
 
+def _extract_date_time(text: str) -> str:
+    # Look for patterns like "30 July 2026 12:19 PM" or "2026-08-12 15:30:00"
+    dt_match = re.search(r'(\d{1,2}\s+[A-Za-z]+\s+\d{4}.*?\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))', text)
+    if dt_match:
+        return dt_match.group(1).replace('\n', ' ')
+    
+    # Alternative format like 30/07/2026 12:19
+    dt_match = re.search(r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4}.*?\d{1,2}:\d{2}(?::\d{2})?(?:\s*(?:AM|PM))?)', text, re.IGNORECASE)
+    if dt_match:
+        return dt_match.group(1).replace('\n', ' ')
+    return ""
+
 def _detect_payment_type(text: str) -> str:
     text_lower = text.lower()
     if 'wave' in text_lower or 'wavemoney' in text_lower or 'wave pay' in text_lower:
@@ -134,16 +146,17 @@ def extract_payment_info(image_bytes: bytes) -> dict:
         amount = _extract_amount(clean_text_str)
         account = _extract_account(clean_text_str)
         tx_id = _extract_transaction_id(clean_text_str)
+        dt_str = _extract_date_time(clean_text_str)
         
         return {
             "payment_type": payment_type,
             "status": status,
             "amount": amount,
-            "from_account": account, 
-            "to_account": "",
+            "from_account": "", 
+            "to_account": account,
             "recipient_name": "",
             "transaction_id": tx_id,
-            "date_time": "",
+            "date_time": dt_str,
             "raw_text": clean_text_str
         }
 
