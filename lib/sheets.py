@@ -40,7 +40,7 @@ Users columns:
 """
 import gspread
 from google.oauth2 import service_account
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from lib import config
 
 _SCOPES = [
@@ -126,7 +126,8 @@ def append_donation(
     """Appends one donation row. Returns True on success."""
     try:
         ws = get_sheet(_DONATIONS_SHEET)
-        submitted_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+        mmt_tz = timezone(timedelta(hours=6, minutes=30))
+        submitted_at = datetime.now(mmt_tz).strftime("%Y-%m-%d %I:%M:%S %p MMT")
         row = [
             submitted_at,
             student_id,
