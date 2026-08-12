@@ -38,8 +38,8 @@ try:
 except Exception as e:
     raise ValueError(f"Failed to decode GOOGLE_SERVICE_ACCOUNT_JSON_BASE64: {e}")
 
-# ─── Gemini ───────────────────────────────────────────────────────────────────
-GEMINI_API_KEY: str = _require("GEMINI_API_KEY")
+# ─── OCR ──────────────────────────────────────────────────────────────────────
+OCR_SPACE_API_KEY: str = _optional("OCR_SPACE_API_KEY", "helloworld")
 
 # ─── Settings ─────────────────────────────────────────────────────────────────
 RATE_LIMIT_SECONDS: int = int(_optional("RATE_LIMIT_SECONDS", "60"))
